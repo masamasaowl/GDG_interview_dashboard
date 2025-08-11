@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Import User model
+// Import DB model
 const User = require('./models/Student');
 
 // Connect to MongoDB
@@ -16,59 +16,49 @@ mongoose.connect(process.env.MONGO_URL)
   .catch((err) => console.error('MongoDB connection error:', err));
 
 
+// ================== Requests ===================
 
-// ✅ GET /users?domain=Web Development → filtered & sorted
-app.get('/users', async (req, res) => {
-  try {
-    const filter = {};
 
-    // If query param ?domain=Something is passed
-    if (req.query.domain) {
-      filter.domain = req.query.domain;
-    }
-
-    const users = await User.find(filter).sort({ priority: 1, branch: 1 });
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /users/:id/remarks  -> add a remark + rating
+// POST request to save remarks 
 app.post('/users/remarks/:id', async (req, res) => {
   try {
+    // check
     console.log("Incoming body:", req.body);
 
     const { text, rating, by } = req.body;
 
-    // ✅ Validate text
+    // Validate input
     if (!text || typeof text !== 'string') {
       return res.status(400).json({ error: 'text is required' });
     }
 
-    // ✅ Validate rating
+    // Validate rating
     const r = Number(rating);
     if (!Number.isFinite(r) || r < 0 || r > 10) {
       return res.status(400).json({ error: 'rating must be a number between 0 and 10' });
     }
 
-    // ✅ Sanitize reviewer name
+    // check reviewer name
     let reviewerName;
     if (typeof by === 'string' && by.trim()) {
       reviewerName = by.trim();
     } else if (by !== undefined) {
-      // Explicit empty string means we store as empty, not default
-      reviewerName = '';
-    }
-    // If by is completely undefined, schema default "Interviewer" applies
 
+      // no name means we store as empty
+      reviewerName = '';
+      // If by is undefined, schema default "Interviewer" applies
+    }
+    
+
+
+    // gather remark
     const remark = {
       text: text.trim(),
       rating: r,
-      ...(reviewerName !== undefined && { by: reviewerName }) // only set if provided
+      ...(reviewerName !== undefined && { by: reviewerName }) 
     };
 
-    // ✅ Push remark into user
+    // push remark into user DB
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { $push: { remarks: remark } },
@@ -86,18 +76,26 @@ app.post('/users/remarks/:id', async (req, res) => {
 });
 
 
-// GET /users/:id → Get single user by ID
+
+// GET request to display dashboard
 app.get('/users/:id', async (req, res) => {
   try {
+
+    // search users in DB
     const user = await User.findById(req.params.id);
+    // error
     if (!user) return res.status(404).send('User not found');
+
+    // fetched by axios inside Dashboard & Student Details
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+
+
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`server running at http://localhost:${PORT}`);
 });

@@ -1,3 +1,39 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+/* Roboto from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+body {
+  font-family: 'Roboto', sans-serif;
+}
+
+/* define Google colors */
+:root{
+  --gdg-blue: #4285F4;
+  --gdg-red: #DB4437;
+  --gdg-yellow: #F4B400;
+  --gdg-green: #0F9D58;
+  --muted: #6b7280;
+}
+
+/* ensuring Roboto is used everywhere */
+html,body,#root {
+  height: 100%;
+  font-family: 'Roboto', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* a custom class for material-ish shadow utility  */
+.shadow-soft {
+  box-shadow: 0 6px 18px rgba(60,64,67,0.08), 0 1px 2px rgba(60,64,67,0.06);
+}
+
+/* ribbon under navbar */
+.gdg-ribbon {
+  height: 4px;
+  background: linear-gradient(90deg, var(--gdg-blue), var(--gdg-red), var(--gdg-yellow), var(--gdg-green));
+  border-radius: 2px;
+}
+

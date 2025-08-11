@@ -5,8 +5,11 @@ import StudentDetails from './components/StudentDetails';
 function App() {
   return (
     <Routes>
+
       <Route path="/" element={<Dashboard/>} />
+      
       <Route path="/user/:id" element={<StudentDetails />} />
+
     </Routes>
   );
 }
