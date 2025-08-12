@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const base = import.meta.env.VITE_API_BASE_URL || "https://gdg-interview-dashboard.onrender.com";
 
 const api = axios.create({ baseURL: base });
 
