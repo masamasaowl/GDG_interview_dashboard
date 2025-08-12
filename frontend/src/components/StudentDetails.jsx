@@ -1,10 +1,9 @@
 // StudentDetails.jsx
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import StudentCard from './StudentCard';
+import { getUserById, addRemark } from "../api/api";
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const StudentDetails = () => {
   const { id } = useParams();
@@ -22,23 +21,24 @@ const StudentDetails = () => {
     let cancelled = false;
     const fetchUser = async () => {
       try {
-        const res = await axios.get(`${API}/users/${id}`);
-        if (!cancelled) setUser(res.data);
+        const data = await getUserById(id);
+        if (!cancelled) setUser(data);
       } catch (err) {
         console.error(err);
       }
     };
     fetchUser();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
-  // submit remark
   const handleSubmit = async (e) => {
     e?.preventDefault();
-    setError('');
+    setError("");
 
     if (!text.trim()) {
-      setError('Please write a remark first.');
+      setError("Please write a remark first.");
       return;
     }
 
@@ -46,23 +46,20 @@ const StudentDetails = () => {
     try {
       const payload = {
         text: text.trim(),
-        rating: Number(rating)
+        rating: Number(rating),
       };
 
       const reviewerTrim = reviewer.trim();
-      if (reviewerTrim) payload.by = reviewerTrim; // only send when provided
+      if (reviewerTrim) payload.by = reviewerTrim;
 
-      // send
-      const res = await axios.post(`${API}/users/remarks/${id}`, payload);
-
-      // update UI
-      setUser(res.data);
-      setText('');
+      const updatedUser = await addRemark(id, payload); // API call via service file
+      setUser(updatedUser);
+      setText("");
       setRating(8);
-      setReviewer('');
+      setReviewer("");
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.error || 'Failed to submit remark');
+      setError(err.response?.data?.error || "Failed to submit remark");
     } finally {
       setIsSubmitting(false);
     }

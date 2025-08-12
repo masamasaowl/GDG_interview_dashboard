@@ -1,14 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import Navbar from "./Navbar";
+import { getAllUsers } from "../api/api";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
-
-/**
- * Small presentational component that renders a colored badge for priority.
- * p: expected numbers 1 (High), 2 (Medium), 3 (Low) — but will gracefully fallback.
- */
 
 const PriorityBadge = ({ p }) => {
   const pri = Number(p);
@@ -47,20 +41,18 @@ const Dashboard = () => {
       setLoading(true);
       setError("");
       try {
-        const res = await axios.get(`${API}/users`);
-        // Support both response shapes:
-        // 1) res.data is array
-        // 2) res.data is an object { data: [...] }
-        const payload = res.data?.data ?? res.data ?? [];
-        if (!cancelled) setUsers(Array.isArray(payload) ? payload : []);
+        const data = await getAllUsers(); // API call via service file
+        if (!cancelled) setUsers(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to fetch users:", err);
-        if (!cancelled) setError("Failed to load users. Please try again.");
+        if (!cancelled)
+          setError("Failed to load users. Please try again.");
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
+    
     fetchUsers();
     return () => { cancelled = true; };
   }, []);

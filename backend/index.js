@@ -1,64 +1,78 @@
-const express = require('express');
-const mongoose = require('mongoose');
+// index.js
 require('dotenv').config();
-const cors = require("cors");
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const morgan = require('morgan');
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// Import DB model
+const { connectDB, closeDB } = require("./db");
 const User = require('./models/Student');
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URL)
-  .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+const app = express();
 
+// Basic middleware
+app.use(helmet()); // security headers
+if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
 
-// ================== Requests ===================
+app.use(express.json());
 
+app.use(cors());
 
-// POST request to save remarks 
+// Basic rate limiter
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 300,            // adjust as needed
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use(limiter);
+
+// Connect DB (fail fast)
+(async () => {
+  try {
+    if (!process.env.MONGO_URL) {
+      console.error('Missing MONGO_URL env var');
+      process.exit(1);
+    }
+    await connectDB(process.env.MONGO_URL);
+  } catch (err) {
+    console.error('DB connect failed', err);
+    process.exit(1);
+  }
+})();
+
+// Health check for Render
+app.get('/_health', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
+// GET /users (list with optional domain filter)
+app.get('/users', async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.domain) filter.domain = req.query.domain;
+    const users = await User.find(filter).sort({ priority: 1, branch: 1 }).exec();
+    res.json(users);
+  } catch (err) {
+    console.error('GET /users error:', err);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// POST remark
 app.post('/users/remarks/:id', async (req, res) => {
   try {
-    // check
-    console.log("Incoming body:", req.body);
-
     const { text, rating, by } = req.body;
+    if (!text || typeof text !== 'string') return res.status(400).json({ error: 'text is required' });
 
-    // Validate input
-    if (!text || typeof text !== 'string') {
-      return res.status(400).json({ error: 'text is required' });
-    }
-
-    // Validate rating
     const r = Number(rating);
-    if (!Number.isFinite(r) || r < 0 || r > 10) {
-      return res.status(400).json({ error: 'rating must be a number between 0 and 10' });
-    }
+    if (!Number.isFinite(r) || r < 0 || r > 10) return res.status(400).json({ error: 'rating must be 0-10' });
 
-    // check reviewer name
     let reviewerName;
-    if (typeof by === 'string' && by.trim()) {
-      reviewerName = by.trim();
-    } else if (by !== undefined) {
+    if (typeof by === 'string' && by.trim()) reviewerName = by.trim();
+    else if (by !== undefined) reviewerName = '';
 
-      // no name means we store as empty
-      reviewerName = '';
-      // If by is undefined, schema default "Interviewer" applies
-    }
-    
+    const remark = { text: text.trim(), rating: r, ...(reviewerName !== undefined && { by: reviewerName }) };
 
-
-    // gather remark
-    const remark = {
-      text: text.trim(),
-      rating: r,
-      ...(reviewerName !== undefined && { by: reviewerName }) 
-    };
-
-    // push remark into user DB
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { $push: { remarks: remark } },
@@ -66,36 +80,40 @@ app.post('/users/remarks/:id', async (req, res) => {
     );
 
     if (!user) return res.status(404).json({ error: 'User not found' });
-
     res.json(user);
-
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    console.error('POST /users/remarks error:', err);
+    res.status(500).json({ error: 'Failed to save remark' });
   }
 });
 
-
-
-// GET request to display dashboard
+// GET single user
 app.get('/users/:id', async (req, res) => {
   try {
-
-    // search users in DB
     const user = await User.findById(req.params.id);
-    // error
     if (!user) return res.status(404).send('User not found');
-
-    // fetched by axios inside Dashboard & Student Details
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('GET /users/:id error:', err);
+    res.status(500).json({ error: 'Failed to fetch user' });
   }
 });
 
-
-
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`server running at http://localhost:${PORT}`);
+// Global error handler (fallback)
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err && err.message ? err.message : err);
+  res.status(500).json({ error: 'Internal server error' });
 });
+
+// Graceful shutdown
+const shutdown = async () => {
+  console.log('Shutting down...');
+  try { await closeDB(); } catch (e) { console.error('Error closing DB', e); }
+  process.exit(0);
+};
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
