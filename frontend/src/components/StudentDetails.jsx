@@ -4,6 +4,31 @@ import { useEffect, useState } from 'react';
 import StudentCard from './StudentCard';
 import { getUserById, addRemark } from "../api/api";
 
+const reviewerGroups = {
+  Joint_Secretary: ["ABHISHEK",
+  "ARYAN PRATAP SINGH",
+  "PEUSH YADAV",
+  "ARYAN SINGH",
+  "VIVEK SHARMA",
+  "PRANAV PATIL",
+  "AYUSH KUMAR",
+  "ANU KUMARI",
+  "PALAK",
+  "SREYASH SINGH",
+  "NITHESH YADAV",
+  "SHASHWAT TRIVEDI",
+  "ASHUTOSH MISHRA",
+  "ARSH TIWARI",
+  "RAJ SINGH"],
+  Secretary: ["Nishant sir", "Divyanshi mam"],
+  TE_Member: ["SANSHEY",
+  "ARUN KUMAR KUSHWAHA",
+  "ASHUTOSH SINGH",
+  "PAVAN KUMAR",
+  "SRIJAN TRIPATHI",
+  "RISHABH KUMAR",
+  "AAYUSH KUMAR"]
+};
 
 const StudentDetails = () => {
   const { id } = useParams();
@@ -13,10 +38,11 @@ const StudentDetails = () => {
   const [text, setText] = useState('');
   const [rating, setRating] = useState(8);
   const [reviewer, setReviewer] = useState('');
+  const [year, setYear] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // fetch user (simple)
+  // fetch user
   useEffect(() => {
     let cancelled = false;
     const fetchUser = async () => {
@@ -52,11 +78,12 @@ const StudentDetails = () => {
       const reviewerTrim = reviewer.trim();
       if (reviewerTrim) payload.by = reviewerTrim;
 
-      const updatedUser = await addRemark(id, payload); // API call via service file
+      const updatedUser = await addRemark(id, payload);
       setUser(updatedUser);
       setText("");
       setRating(8);
       setReviewer("");
+      setYear("");
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Failed to submit remark");
@@ -74,20 +101,19 @@ const StudentDetails = () => {
         {/* back button */}
         <Link to="/" className="inline-block text-blue-600 hover:underline mb-4">&larr; Back to Dashboard</Link>
 
-        {/* layout: card left, remarks right (stacks on small screens) */}
+        {/* layout: card left, remarks right */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-          {/* left column: student card */}
+          {/* left column */}
           <div>
             <StudentCard user={user} />
-
             <div className="mt-4 text-sm text-gray-500">
               <div><strong>Submitted:</strong> {new Date(user.createdAt).toLocaleString()}</div>
               <div className="mt-2 text-xs">ID: <span className="text-gray-700">{user._id}</span></div>
             </div>
           </div>
 
-          {/* right columns: form + remarks */}
+          {/* right columns */}
           <div className="md:col-span-2 space-y-6">
 
             {/* Add Remark */}
@@ -108,20 +134,48 @@ const StudentDetails = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
 
-                  {/* reviewer name */}
+                  {/* Year dropdown */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Reviewer Name</label>
-                    <input
-                      type="text"
-                      value={reviewer}
-                      onChange={(e) => setReviewer(e.target.value)}
-                      placeholder="e.g. Nishant Sir"
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Year</label>
+                    <select
+                      value={year}
+                      onChange={(e) => {
+                        setYear(e.target.value);
+                        setReviewer(""); // reset reviewer
+                      }}
                       className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      aria-label="Reviewer name"
-                    />
+                    >
+                      <option value="">Select Year</option>
+                      {Object.keys(reviewerGroups).map((yr) => (
+                        <option key={yr} value={yr}>{yr}</option>
+                      ))}
+                    </select>
                   </div>
 
-                  {/* rating */}
+                  {/* Reviewer dropdown (dependent on year) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Reviewer Name</label>
+                    <select
+                      value={reviewer}
+                      onChange={(e) => setReviewer(e.target.value)}
+                      disabled={!year}
+                      className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 
+                                text-gray-800 shadow-sm appearance-none focus:outline-none 
+                                focus:border-blue-500 focus:ring-2 focus:ring-blue-200 
+                                transition duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="" className="bg-white text-gray-600 hover:bg-gray-100">Select Reviewer</option>
+                      {year &&
+                        reviewerGroups[year].map((name, idx) => (
+                          <option key={idx} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+
+                  {/* Rating */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Rating (0–10)</label>
                     <div className="flex items-center gap-3">
@@ -138,17 +192,18 @@ const StudentDetails = () => {
                     </div>
                   </div>
 
-                  {/* submit */}
-                  <div className="flex items-end justify-end">
-                    <button
-                      disabled={isSubmitting}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-60 w-full sm:w-auto"
-                      type="submit"
-                      aria-label="Save remark"
-                    >
-                      {isSubmitting ? 'Saving...' : 'Save Remark'}
-                    </button>
-                  </div>
+                </div>
+
+                {/* submit button */}
+                <div className="flex justify-end">
+                  <button
+                    disabled={isSubmitting}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-60"
+                    type="submit"
+                    aria-label="Save remark"
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save Remark'}
+                  </button>
                 </div>
 
                 {error && <p className="text-red-600 text-sm">{error}</p>}
@@ -170,13 +225,10 @@ const StudentDetails = () => {
                           <span>{new Date(r.createdAt).toLocaleString()}</span>
                         </div>
                       </div>
-
                       <div className="flex flex-col items-start sm:items-end">
                         <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-sm font-semibold">
                           {r.rating}/10
                         </div>
-                        {/* small actions placeholder (edit/delete) */}
-                        <div className="text-xs text-gray-400 mt-2">{/* actions */}</div>
                       </div>
                     </div>
                   ))
