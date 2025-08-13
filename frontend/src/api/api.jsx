@@ -18,3 +18,13 @@ export const addRemark = async (id, remarkData) => {
   const res = await api.post(`/users/remarks/${id}`, remarkData);
   return res.data;
 };
+
+export const updateRemark = async (userId, remarkId, remarkData) => {
+  const res = await api.put(`/users/${userId}/remarks/${remarkId}`, remarkData);
+  return res.data;
+};
+
+export const deleteRemark = async (userId, remarkId) => {
+  const res = await api.delete(`/users/${userId}/remarks/${remarkId}`);
+  return res.data;
+};

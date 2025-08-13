@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import { getAllUsers } from "../api/api";
+import Searchbar from "./SearchBar";
 
 
 const PriorityBadge = ({ p }) => {
@@ -93,6 +94,13 @@ const Dashboard = () => {
       {/* Page container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+        {/* Pill-shaped searchbar centered, ~70% width on md+ and full width on small screens */}
+        <Searchbar
+          value={searchTerm}
+          onChange={(q) => setSearchTerm(q)}   /* live filter while typing */
+          onSearch={(q) => setSearchTerm(q)}   /* also update on submit / suggestion click */
+        />
+
         {/* header row: title + results count */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-gray-800">Interview Candidates</h2>
@@ -119,6 +127,10 @@ const Dashboard = () => {
 
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Priority
+                  </th>
+
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rating
                   </th>
                 </tr>
               </thead>
@@ -155,6 +167,12 @@ const Dashboard = () => {
                     {/* Priority */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <PriorityBadge p={user.priority} />
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      {user.remarks?.length > 0
+                        ? `${user.remarks[user.remarks.length - 1].rating}/10`
+                        : '-'}
                     </td>
                   </tr>
                 ))}
@@ -197,6 +215,15 @@ const Dashboard = () => {
                       <div className="text-xs text-gray-500">{user.branch || '-'}</div>
                       <div className="mt-2"><PriorityBadge p={user.priority} /></div>
                     </div>
+
+
+                    {/* Latest Rating */}
+                    <div className="mt-1 text-xs text-gray-500">
+                      Rating: {user.remarks?.length > 0
+                        ? `${user.remarks[user.remarks.length - 1].rating}/10`
+                        : 'Not rated'}
+                    </div>
+
                   </div>
 
                   <div className="mt-2 text-sm text-gray-700">{user.domain || '-'}</div>
