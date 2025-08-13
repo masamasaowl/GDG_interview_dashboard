@@ -99,6 +99,61 @@ app.get('/users/:id', async (req, res) => {
   }
 });
 
+// PUT remark (update an existing remark)
+app.put('/users/:userId/remarks/:remarkId', async (req, res) => {
+  try {
+    const { text, rating, by } = req.body;
+
+    if (text !== undefined && (typeof text !== 'string' || !text.trim())) {
+      return res.status(400).json({ error: 'text must be a non-empty string' });
+    }
+
+    if (rating !== undefined) {
+      const r = Number(rating);
+      if (!Number.isFinite(r) || r < 0 || r > 10) {
+        return res.status(400).json({ error: 'rating must be between 0 and 10' });
+      }
+    }
+
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.userId, 'remarks._id': req.params.remarkId },
+      {
+        $set: {
+          ...(text !== undefined && { 'remarks.$.text': text.trim() }),
+          ...(rating !== undefined && { 'remarks.$.rating': rating }),
+          ...(by !== undefined && { 'remarks.$.by': by.trim?.() || '' })
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) return res.status(404).json({ error: 'User or remark not found' });
+    res.json(user);
+  } catch (err) {
+    console.error('PUT /users/remarks error:', err);
+    res.status(500).json({ error: 'Failed to update remark' });
+  }
+});
+
+// DELETE remark (remove a remark)
+app.delete('/users/:userId/remarks/:remarkId', async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.userId,
+      { $pull: { remarks: { _id: req.params.remarkId } } },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    console.error('DELETE /users/remarks error:', err);
+    res.status(500).json({ error: 'Failed to delete remark' });
+  }
+});
+
+
+
 // Global error handler (fallback)
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err && err.message ? err.message : err);
