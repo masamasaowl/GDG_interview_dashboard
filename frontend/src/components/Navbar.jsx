@@ -1,15 +1,21 @@
 import React from "react";
 
-const Navbar = ({ searchTerm, setSearchTerm }) => {
+// This component creates a navigation bar for the top of the page.
+const Navbar = () => {
   return (
+    // The header is the main container for the entire navigation bar.
     <header className="bg-white">
+      {/* This container sets the maximum width and adds horizontal padding. It's centered on the page. */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* This is a flexbox container that aligns its children vertically and places them at opposite ends. */}
         <div className="flex items-center justify-between h-16">
-
-
-          {/* Logo & Title */}
+          
+          {/* This section holds the logo and the group's name. */}
           <div className="flex items-center gap-3">
+            {/* The link wraps the logo and directs the user to the homepage. */}
             <a href="/">
+                {/* The logo image. */}
                 <img 
                 src="/dsc-logo.webp" 
                 alt="GDG Logo"
@@ -17,43 +23,23 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
                 />
             </a>
             
-            <span className="text-xl font-medium text-gray-800">
-              GDG Student Dashboard
+            {/* The group's name, which is slightly smaller on small screens for better readability. */}
+            <span className="text-xl sm:text-2xl font-medium text-gray-800">
+              Google Developers Group
             </span>
           </div>
-
-
-          {/* Search input */}
-          <div className="flex-1 max-w-xl mx-6">
-            <div className="relative">
-              {/* search icon (inline) */}
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"></path>
-                </svg>
-              </div>
-
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by name..."
-                className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-300"
-                aria-label="Search by name"
-              />
-            </div>
-          </div>
-
-          {/* Right: small actions (placeholder) */}
+          
+          {/* This section contains buttons and other actions on the right side of the navigation bar. */}
           <div className="flex items-center gap-3">
+            {/* The button is a link to an external website. */}
             <a href="https://www.gdgaitpune.me/" target="_blank">
-                <button className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-700">Add Student</button>
+                <button className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-700">+ Add Student</button>
             </a>
             
           </div>
         </div>
 
-        {/* small GDG multicolor ribbon */}
+        {/* This is a small decorative ribbon below the main navbar. */}
         <div className="mt-3 gdg-ribbon" />
       </div>
     </header>

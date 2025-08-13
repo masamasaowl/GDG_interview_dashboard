@@ -4,7 +4,7 @@ import Navbar from "./Navbar";
 import { getAllUsers } from "../api/api";
 import Searchbar from "./Searchbar";
 
-
+// Small component to show priority levels with colors
 const PriorityBadge = ({ p }) => {
   const pri = Number(p);
   const map = {
@@ -16,25 +16,22 @@ const PriorityBadge = ({ p }) => {
   const label = pri === 1 ? "High" : pri === 2 ? "Medium" : pri === 3 ? "Low" : String(p || "-");
 
   return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${className}`}>
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${className}`}>
       {label}
     </span>
   );
 };
 
-/**
- * Dashboard: shows candidates as a table on wide screens and as cards on mobile.
- * - searchTerm is kept locally and passed down to Navbar to update.
- * - the API response may be either an array (res.data) or { data: [...] } depending on backend.
- */
+// Main dashboard that shows all students in a table or cards based on screen size
 const Dashboard = () => {
-  const [users, setUsers] = useState([]);         // all users loaded from API
-  const [searchTerm, setSearchTerm] = useState(""); // search input state (shared with Navbar)
-  const [loading, setLoading] = useState(true);   // loading indicator
-  const [error, setError] = useState("");         // error message (if any)
+  const [users, setUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchField, setSearchField] = useState("name");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // Fetch users once on mount
+  // Load all users when component first mounts
   useEffect(() => {
     let cancelled = false;
 
@@ -42,45 +39,91 @@ const Dashboard = () => {
       setLoading(true);
       setError("");
       try {
-        const data = await getAllUsers(); // API call via service file
+        const data = await getAllUsers();
         if (!cancelled) setUsers(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Failed to fetch users:", err);
-        if (!cancelled)
-          setError("Failed to load users. Please try again.");
+        if (!cancelled) setError("Failed to load users. Please try again.");
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
-    
     fetchUsers();
     return () => { cancelled = true; };
   }, []);
 
-  // Client-side filtering (instant). Trim + case-insensitive.
-  const filteredUsers = users.filter((user) =>
-    user.name?.toLowerCase().includes(searchTerm.trim().toLowerCase())
-  );
+  // Get the most recent rating from a user's remarks
+  const getLatestRating = (user) => {
+    const r = user.remarks;
+    if (!r || !r.length) return null;
+    const last = r[r.length - 1];
+    return typeof last.rating === "number" ? last.rating : null;
+  };
 
-  // Loading / Error states
+  // Filter users based on search term and selected field
+  const filterUsers = () => {
+    const q = searchTerm.trim().toLowerCase();
+    
+    return users.filter((user) => {
+      if (!q) return true;
+
+      if (searchField === "name") {
+        return (user.name || "").toLowerCase().includes(q);
+      }
+
+      if (searchField === "reg") {
+        return (user.reg || "").toLowerCase().includes(q);
+      }
+
+      if (searchField === "priority") {
+        const mapping = { high: "1", medium: "2", low: "3" };
+        if (mapping[q]) {
+          return String(user.priority) === mapping[q];
+        }
+        const num = Number(q);
+        if (!Number.isNaN(num)) {
+          return Number(user.priority) === num;
+        }
+        return String(user.priority || "").toLowerCase().includes(q);
+      }
+
+      if (searchField === "rating") {
+        const num = Number(q);
+        const latest = getLatestRating(user);
+        if (Number.isFinite(num) && latest !== null) {
+          return latest >= num;
+        }
+        return latest !== null && String(latest).toLowerCase().includes(q);
+      }
+
+      return true;
+    });
+  };
+
+  const filteredUsers = filterUsers();
+
+  // Show loading spinner while fetching data
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center text-gray-500">Loading users…</div>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="text-center text-gray-500 py-8">Loading users…</div>
         </main>
       </div>
     );
   }
 
+  // Show error message if API call failed
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center text-red-600">{error}</div>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center text-red-600">
+            {error}
+          </div>
         </main>
       </div>
     );
@@ -88,48 +131,52 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar with search (searchTerm is lifted here) */}
-      <Navbar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+      <Navbar />
 
-      {/* Page container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
-        {/* Pill-shaped searchbar centered, ~70% width on md+ and full width on small screens */}
+        {/* Search bar that works on all screen sizes */}
         <Searchbar
           value={searchTerm}
-          onChange={(q) => setSearchTerm(q)}   /* live filter while typing */
-          onSearch={(q) => setSearchTerm(q)}   /* also update on submit / suggestion click */
+          field={searchField}
+          onChange={(q, f) => {
+            setSearchTerm(q);
+            if (f) setSearchField(f);
+          }}
+          onSearch={(q, f) => {
+            setSearchTerm(q);
+            if (f) setSearchField(f);
+          }}
         />
 
-        {/* header row: title + results count */}
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-gray-800">Interview Candidates</h2>
+        {/* Page header with title and results count */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">Interview Candidates</h2>
           <p className="text-sm text-gray-500">{filteredUsers.length} results</p>
         </div>
 
-        {/* TABLE (visible on md and larger) */}
-        <div className="hidden md:block bg-white rounded-lg shadow-soft overflow-hidden">
+        {/* Desktop table view */}
+        <div className="hidden lg:block bg-white rounded-lg shadow-sm overflow-hidden border">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Name
                   </th>
-
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Domain
                   </th>
-
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Regn no
+                  </th>
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Branch
                   </th>
-
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Priority
                   </th>
-
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Rating
                   </th>
                 </tr>
@@ -142,34 +189,35 @@ const Dashboard = () => {
                     tabIndex={0}
                     onClick={() => navigate(`/user/${user._id}`)}
                     onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/user/${user._id}`); }}
-                    className="hover:bg-blue-50 focus:bg-blue-50 cursor-pointer transition-colors"
+                    className="hover:bg-blue-50 focus:bg-blue-50 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-200"
                   >
-                    {/* Name + email */}
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center text-sm font-medium text-gray-700">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center text-sm font-medium text-gray-700 flex-shrink-0">
                           {user.name ? user.name.split(' ').map(n => n[0]).slice(0,2).join('') : 'NA'}
                         </div>
-
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                          <div className="text-xs text-gray-500">{user.email}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-gray-900 truncate">{user.name}</div>
+                          <div className="text-xs text-gray-500 truncate">{user.email}</div>
                         </div>
                       </div>
                     </td>
 
-                    {/* Domain */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{user.domain || '-'}</td>
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      <span className="truncate block max-w-32">{user.domain || '-'}</span>
+                    </td>
 
-                    {/* Branch */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{user.branch || '-'}</td>
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{user.reg || '-'}</td>
 
-                    {/* Priority */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      <span className="truncate block max-w-28">{user.branch || '-'}</span>
+                    </td>
+
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm">
                       <PriorityBadge p={user.priority} />
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       {user.remarks?.length > 0
                         ? `${user.remarks[user.remarks.length - 1].rating}/10`
                         : '-'}
@@ -177,10 +225,11 @@ const Dashboard = () => {
                   </tr>
                 ))}
 
-                {/* fallback when there are no results */}
                 {filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="text-center py-8 text-gray-500">No users found.</td>
+                    <td colSpan={6} className="text-center py-8 text-gray-500">
+                      No users found matching your search.
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -188,8 +237,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* MOBILE: card list (visible on small screens only) */}
-        <div className="md:hidden space-y-4">
+        {/* Mobile and tablet card view */}
+        <div className="lg:hidden space-y-3 sm:space-y-4">
           {filteredUsers.map((user) => (
             <article
               key={user._id}
@@ -197,43 +246,53 @@ const Dashboard = () => {
               tabIndex={0}
               onClick={() => navigate(`/user/${user._id}`)}
               onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/user/${user._id}`); }}
-              className="bg-white p-4 rounded-lg shadow-soft hover:shadow-md transition cursor-pointer"
+              className="bg-white p-4 sm:p-5 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer border focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
-              <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center text-sm font-medium text-gray-700">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center text-sm font-medium text-gray-700 flex-shrink-0">
                   {user.name ? user.name.split(' ').map(n => n[0]).slice(0,2).join('') : 'NA'}
                 </div>
 
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                      <div className="text-xs text-gray-500">{user.email}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm sm:text-base font-medium text-gray-900 truncate">{user.name}</div>
+                      <div className="text-xs sm:text-sm text-gray-500 truncate">{user.email}</div>
                     </div>
 
-                    <div className="text-right">
-                      <div className="text-xs text-gray-500">{user.branch || '-'}</div>
-                      <div className="mt-2"><PriorityBadge p={user.priority} /></div>
+                    <div className="flex-shrink-0">
+                      <PriorityBadge p={user.priority} />
                     </div>
+                  </div>
 
-
-                    {/* Latest Rating */}
-                    <div className="mt-1 text-xs text-gray-500">
-                      Rating: {user.remarks?.length > 0
+                  <div className="mt-2 space-y-1">
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      <span className="font-medium">Branch:</span> {user.branch || '-'}
+                    </div>
+                    
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      <span className="font-medium">Domain:</span> {user.domain || '-'}
+                    </div>
+                    
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      <span className="font-medium">Reg:</span> {user.reg || '-'}
+                    </div>
+                    
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      <span className="font-medium">Rating:</span> {user.remarks?.length > 0
                         ? `${user.remarks[user.remarks.length - 1].rating}/10`
                         : 'Not rated'}
                     </div>
-
                   </div>
-
-                  <div className="mt-2 text-sm text-gray-700">{user.domain || '-'}</div>
                 </div>
               </div>
             </article>
           ))}
 
           {filteredUsers.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No users found.</div>
+            <div className="text-center py-8 text-gray-500 bg-white rounded-lg border">
+              No users found matching your search.
+            </div>
           )}
         </div>
 
