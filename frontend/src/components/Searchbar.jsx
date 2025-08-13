@@ -145,7 +145,7 @@ export default function Searchbar({ value = "", onChange, onSearch }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.12 }}
-                className="absolute left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-md overflow-hidden z-30 max-h-60 overflow-auto"
+                className="absolute left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-md overflow-hidden z-30 max-h-60"
                 role="listbox"
                 aria-label="Search suggestions"
               >

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import { getAllUsers } from "../api/api";
-import Searchbar from "./SearchBar";
+import Searchbar from "./Searchbar";
 
 
 const PriorityBadge = ({ p }) => {
